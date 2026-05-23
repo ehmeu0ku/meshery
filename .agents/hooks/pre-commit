@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pre-commit hook: runs all configured pre-commit checks for the meshery project.
+# Place this file at .git/hooks/pre-commit or use the install-hooks.sh script.
+#
+# Checks performed:
+#   1. Block lock files from being committed (block-lockfiles.sh)
+#   2. Format frontend files (format-frontend.sh)
+#   3. Validate commit message format (validate-commit-msg.sh)
+
+set -euo pipefail
+
+HOOKS_DIR="$(git rev-parse --show-toplevel)/.agents/hooks"
+
+# Ensure hooks directory exists
+if [[ ! -d "$HOOKS_DIR" ]]; then
+  echo "[pre-commit] ERROR: Hooks directory not found at $HOOKS_DIR"
+  exit 1
+fi
+
+run_hook() {
+  local script="$1"
+  local label="$2"
+
+  if [[ ! -f "$script" ]]; then
+    echo "[pre-commit] WARNING: Hook script not found: $script — skipping."
+    return 0
+  fi
+
+  if [[ ! -x "$script" ]]; then
+    chmod +x "$script"
+  fi
+
+  echo "[pre-commit] Running: $label"
+  if ! bash "$script"; then
+    echo "[pre-commit] FAILED: $label"
+    exit 1
+  fi
+  echo "[pre-commit] PASSED: $label"
+}
+
+# 1. Block lock files
+run_hook "$HOOKS_DIR/block-lockfiles.sh" "Block lock files"
+
+# 2. Format frontend
+run_hook "$HOOKS_DIR/format-frontend.sh" "Format frontend files"
+
+echo "[pre-commit] All checks passed."
+exit 0
